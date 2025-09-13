@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\WorkflowController;
+use App\Http\Controllers\FormTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +22,14 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('workflows', WorkflowController::class);
     Route::resource('requests', RequestController::class)->except(['edit', 'update', 'destroy']);
+
+    // Builder APIs
+    Route::post('/builder/workflows/ensure-default', [WorkflowController::class, 'ensureDefault']);
+    Route::post('/builder/workflows/{workflow}/visual', [WorkflowController::class, 'saveVisual']);
+    Route::post('/builder/workflows/{workflow}/versions', [WorkflowController::class, 'createVersion']);
+
+    Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
+    Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('index');
