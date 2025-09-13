@@ -11,7 +11,12 @@
                     <button @click="addNode('Approval')" class="px-2 py-2 bg-white border rounded hover:bg-gray-100">Approval</button>
                     <button @click="addNode('Condition')" class="px-2 py-2 bg-white border rounded hover:bg-gray-100">Condition</button>
                     <button @click="addNode('Parallel')" class="px-2 py-2 bg-white border rounded hover:bg-gray-100">Parallel</button>
+                    <button @click="addNode('Merge')" class="px-2 py-2 bg-white border rounded hover:bg-gray-100">Merge</button>
                     <button @click="addNode('End')" class="px-2 py-2 bg-white border rounded hover:bg-gray-100">End</button>
+                </div>
+
+                <div class="mt-3 text-xs text-gray-600">
+                    <p class="mb-1"><strong>Tip:</strong> Use Parallel to split into multiple approvals, then connect them back to a Merge (or End). Parallel policy controls ALL vs ANY completion.</p>
                 </div>
 
                 <div class="mt-4">
@@ -37,7 +42,7 @@
 
                 <!-- simple edges rendering as lines -->
                 <svg class="absolute inset-0 pointer-events-none" :width="'100%'" :height="'100%'">
-                    <line v-for="e in edges" :key="e.id" :x1="edgePoints(e).x1" :y1="edgePoints(e).y1" :x2="edgePoints(e).x2" :y2="edgePoints(e).y2" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                    <line v-for="e in edges" :key="e.id" :x1="edgePoints(e).x1" :y1="edgePoints(e).y1" :x2="edgePoints(e).x2" :y2="edgePoints(e).y2" :stroke="edgeStroke(e)" :stroke-dasharray="e.condition ? '4 4' : null" :stroke-width="edgeWidth(e)" marker-end="url(#arrow)" />
                     <defs>
                         <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
@@ -335,6 +340,19 @@ async function generateDefinitionAndSave() {
     const def = generateDefinition();
     definitionJson.value = JSON.stringify(def, null, 2);
     await saveVersion();
+}
+
+// Edge visuals
+function edgeStroke(e) {
+    const from = nodeById(e.fromId);
+    if (from?.type === 'Parallel') return '#2563eb'; // blue for split
+    if (from?.type === 'Condition') return '#16a34a'; // green for condition
+    return '#94a3b8';
+}
+
+function edgeWidth(e) {
+    const from = nodeById(e.fromId);
+    return from?.type === 'Parallel' ? 3 : 2;
 }
 </script>
 
