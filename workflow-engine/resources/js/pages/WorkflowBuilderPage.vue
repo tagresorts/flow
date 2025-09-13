@@ -18,6 +18,17 @@
                 </div>
             </div>
         </div>
+        <div class="mt-4 bg-gray-50 border rounded p-3">
+            <h2 class="font-semibold mb-2">Linked Form Template</h2>
+            <div class="flex items-center gap-3">
+                <select v-model="selectedTemplateId" class="border rounded p-2">
+                    <option :value="null">-- Select Template --</option>
+                    <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+                <button @click="saveFormTemplate" class="px-3 py-2 bg-slate-700 text-white rounded">Save Link</button>
+            </div>
+            <p v-if="visualMeta && visualMeta.form_template_id" class="text-xs text-gray-500 mt-2">Current: Template #{{ visualMeta.form_template_id }}</p>
+        </div>
         <p v-if="status" class="mt-4 text-sm text-green-700">{{ status }}</p>
     </div>
 </template>
@@ -31,13 +42,20 @@ const visualConfigJson = ref('{\n  "nodes": []\n}');
 const definitionJson = ref('{\n  "start": "node-1",\n  "nodes": {}\n}');
 const activateVersion = ref(false);
 const status = ref('');
+const templates = ref([]);
+const selectedTemplateId = ref(null);
+const visualMeta = ref(null);
 
 onMounted(async () => {
     const res = await axios.post('/builder/workflows/ensure-default');
     workflowId.value = res.data.id;
     if (res.data.visual_config) {
         visualConfigJson.value = JSON.stringify(res.data.visual_config, null, 2);
+        visualMeta.value = res.data.visual_config?.meta || null;
+        selectedTemplateId.value = visualMeta.value?.form_template_id ?? null;
     }
+    const t = await axios.get('/builder/forms/templates');
+    templates.value = t.data.data ?? t.data;
 });
 
 async function saveVisual() {
@@ -55,6 +73,14 @@ async function saveVersion() {
         is_active: activateVersion.value,
     });
     status.value = 'Version created';
+}
+
+async function saveFormTemplate() {
+    status.value = '';
+    await axios.post(`/builder/workflows/${workflowId.value}/form-template`, {
+        form_template_id: selectedTemplateId.value,
+    });
+    status.value = 'Linked form template saved';
 }
 </script>
 

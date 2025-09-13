@@ -29,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/builder/workflows/ensure-default', [WorkflowController::class, 'ensureDefault']);
     Route::post('/builder/workflows/{workflow}/visual', [WorkflowController::class, 'saveVisual']);
     Route::post('/builder/workflows/{workflow}/versions', [WorkflowController::class, 'createVersion']);
+    Route::post('/builder/workflows/{workflow}/form-template', [WorkflowController::class, 'setFormTemplate']);
 
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);

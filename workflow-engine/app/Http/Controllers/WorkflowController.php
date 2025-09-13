@@ -139,4 +139,24 @@ class WorkflowController extends Controller
 
         return response()->json($version->load('workflow'), 201);
     }
+
+    /**
+     * Attach a form template to this workflow (stored in visual_config.meta.form_template_id).
+     */
+    public function setFormTemplate(Request $request, Workflow $workflow)
+    {
+        $data = $request->validate([
+            'form_template_id' => 'required|integer|exists:form_templates,id',
+        ]);
+
+        $visual = $workflow->visual_config ?? [];
+        $visual['meta'] = $visual['meta'] ?? [];
+        $visual['meta']['form_template_id'] = $data['form_template_id'];
+        $workflow->update([
+            'visual_config' => $visual,
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return response()->json($workflow->fresh(), 200);
+    }
 }
