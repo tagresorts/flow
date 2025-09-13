@@ -9,6 +9,8 @@ import WorkflowBuilderPage from '@/pages/WorkflowBuilderPage.vue';
 import FormBuilderPage from '@/pages/FormBuilderPage.vue';
 import NewRequestPage from '@/pages/NewRequestPage.vue';
 import AuditLogsPage from '@/pages/AuditLogsPage.vue';
+import AdminUsersPage from '@/pages/AdminUsersPage.vue';
+import AdminSmtpPage from '@/pages/AdminSmtpPage.vue';
 
 const routes = [
     { path: '/dashboard', name: 'dashboard', component: DashboardPage },
@@ -19,6 +21,8 @@ const routes = [
     { path: '/dashboard/builder/form', name: 'form-builder', component: FormBuilderPage },
     { path: '/dashboard/requests/new', name: 'request-new', component: NewRequestPage },
     { path: '/dashboard/audit', name: 'audit', component: AuditLogsPage },
+    { path: '/dashboard/admin/users', component: AdminUsersPage },
+    { path: '/dashboard/admin/smtp', component: AdminSmtpPage },
     { path: '/dashboard/:pathMatch(.*)*', redirect: { name: 'dashboard' } },
 ];
 

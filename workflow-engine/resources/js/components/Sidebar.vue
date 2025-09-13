@@ -61,6 +61,18 @@
                         <span v-if="!collapsed">Audit Logs</span>
                     </RouterLink>
                 </li>
+                <li class="mb-2">
+                    <RouterLink to="/dashboard/admin/users" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Users">
+                        <span>👤</span>
+                        <span v-if="!collapsed">Users</span>
+                    </RouterLink>
+                </li>
+                <li class="mb-2">
+                    <RouterLink to="/dashboard/admin/smtp" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="SMTP Settings">
+                        <span>✉️</span>
+                        <span v-if="!collapsed">SMTP Settings</span>
+                    </RouterLink>
+                </li>
             </ul>
         </nav>
 

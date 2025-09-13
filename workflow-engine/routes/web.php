@@ -9,6 +9,8 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\UserDirectoryController;
 use App\Http\Controllers\RoleDirectoryController;
+use App\Http\Controllers\MailSettingController;
+use App\Http\Controllers\UserAdminController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,6 +44,15 @@ Route::middleware(['auth'])->group(function () {
     // Directory
     Route::get('/directory/users', [UserDirectoryController::class, 'users']);
     Route::get('/directory/roles', [RoleDirectoryController::class, 'roles']);
+
+    // Admin
+    Route::get('/admin/mail-settings', [MailSettingController::class, 'index']);
+    Route::post('/admin/mail-settings', [MailSettingController::class, 'store']);
+    Route::post('/admin/mail-settings/test', [MailSettingController::class, 'test']);
+
+    Route::get('/admin/users', [UserAdminController::class, 'index']);
+    Route::post('/admin/users/{user}/roles/assign', [UserAdminController::class, 'assignRole']);
+    Route::post('/admin/users/{user}/roles/revoke', [UserAdminController::class, 'revokeRole']);
 
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);
