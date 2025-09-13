@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
+use App\Models\FormTemplate;
+use App\Models\Form;
+use App\Models\FormField;
 use Illuminate\Http\Request;
 
 class WorkflowController extends Controller
@@ -149,14 +152,71 @@ class WorkflowController extends Controller
             'form_template_id' => 'required|integer|exists:form_templates,id',
         ]);
 
+        // Store link in visual_config.meta
         $visual = $workflow->visual_config ?? [];
         $visual['meta'] = $visual['meta'] ?? [];
         $visual['meta']['form_template_id'] = $data['form_template_id'];
+
+        // Publish template to Form & FormFields for runtime usage
+        $template = FormTemplate::findOrFail($data['form_template_id']);
+        $schema = $template->json_schema ?? ['fields' => []];
+
+        $form = Form::updateOrCreate(
+            ['workflow_id' => $workflow->id],
+            [
+                'name' => $template->name,
+                'description' => 'Published from template #' . $template->id,
+                'created_by' => $request->user()->id,
+                'updated_by' => $request->user()->id,
+                'is_active' => true,
+            ]
+        );
+
+        // Recreate fields
+        FormField::where('form_id', $form->id)->delete();
+        foreach (($schema['fields'] ?? []) as $f) {
+            FormField::create([
+                'form_id' => $form->id,
+                'label' => $f['label'] ?? ucfirst($f['variable_name'] ?? $f['type'] ?? 'Field'),
+                'type' => $f['type'] ?? 'text',
+                'variable_name' => $f['variable_name'] ?? null,
+                'options' => $f['options'] ?? [],
+                'default_value' => $f['default_value'] ?? null,
+                'is_required' => (bool)($f['is_required'] ?? false),
+                'validation_rules' => null,
+            ]);
+        }
+
+        $visual['meta']['form_id'] = $form->id;
+
         $workflow->update([
             'visual_config' => $visual,
             'updated_by' => $request->user()->id,
         ]);
 
         return response()->json($workflow->fresh(), 200);
+    }
+
+    /**
+     * Get linked Form Template for this workflow (if any).
+     */
+    public function getFormTemplate(Workflow $workflow)
+    {
+        $visual = $workflow->visual_config ?? [];
+        $templateId = $visual['meta']['form_template_id'] ?? null;
+        if (! $templateId) {
+            return response()->json(null);
+        }
+        $template = \App\Models\FormTemplate::find($templateId);
+        return response()->json($template);
+    }
+
+    /**
+     * Get the published Form (with fields) for a workflow
+     */
+    public function getForm(Workflow $workflow)
+    {
+        $form = Form::with('fields')->where('workflow_id', $workflow->id)->first();
+        return response()->json($form);
     }
 }

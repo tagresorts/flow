@@ -6,6 +6,7 @@ use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\FormTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\FormController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/builder/workflows/{workflow}/visual', [WorkflowController::class, 'saveVisual']);
     Route::post('/builder/workflows/{workflow}/versions', [WorkflowController::class, 'createVersion']);
     Route::post('/builder/workflows/{workflow}/form-template', [WorkflowController::class, 'setFormTemplate']);
+    Route::get('/builder/workflows/{workflow}/form-template', [WorkflowController::class, 'getFormTemplate']);
+    Route::get('/workflows/{workflow}/form', [WorkflowController::class, 'getForm']);
+
+    // Forms list
+    Route::get('/forms', [FormController::class, 'index']);
 
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);
