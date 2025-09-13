@@ -4,6 +4,8 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\FormTemplateController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +32,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);
+
+    // Dashboard APIs
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+    Route::get('/dashboard/requests', [DashboardController::class, 'list']);
+    Route::get('/audit/logs', [AuditLogController::class, 'index']);
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('index');
