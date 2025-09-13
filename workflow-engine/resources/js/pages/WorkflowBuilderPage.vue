@@ -62,6 +62,17 @@
                         </label>
                     </div>
 
+                    <div v-if="selectedNode.type === 'Parallel'" class="mt-3">
+                        <h3 class="font-medium mb-1">Parallel Settings</h3>
+                        <label class="block text-sm">Completion policy
+                            <select v-model="selectedNode.parallelPolicy" class="mt-1 border rounded p-1 w-full">
+                                <option value="ALL">All branches must complete</option>
+                                <option value="ANY">Any one branch completes</option>
+                            </select>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">Use edge conditions below to enable/disable branches based on form variables.</p>
+                    </div>
+
                     <div class="mt-3">
                         <h3 class="font-medium mb-1">Connect</h3>
                         <div class="flex items-center gap-2">
@@ -71,12 +82,22 @@
                             </select>
                             <button @click="createEdge()" class="px-2 py-1 bg-indigo-600 text-white rounded text-sm">Add</button>
                         </div>
-                        <ul class="mt-2 text-xs space-y-1">
-                            <li v-for="e in outgoingEdges(selectedNodeId)" :key="e.id" class="flex items-center justify-between bg-white border rounded p-1">
-                                <span>→ {{ nodeById(e.toId)?.label }}</span>
-                                <button @click="deleteEdge(e.id)" class="text-rose-600">Remove</button>
-                            </li>
-                        </ul>
+                        <div class="mt-2 space-y-2">
+                            <div v-for="e in outgoingEdges(selectedNodeId)" :key="e.id" class="bg-white border rounded p-2 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <strong>→ {{ nodeById(e.toId)?.label }}</strong>
+                                    <button @click="deleteEdge(e.id)" class="text-rose-600">Remove</button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                    <label class="block">Label
+                                        <input v-model="e.label" class="mt-1 border rounded p-1 w-full" placeholder="e.g. Path A" />
+                                    </label>
+                                    <label class="block">Condition (optional)
+                                        <input v-model="e.condition" class="mt-1 border rounded p-1 w-full" placeholder="e.g. amount > 5000" />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-3">
@@ -212,7 +233,7 @@ function outgoingEdges(id) {
 
 function createEdge() {
     if (!selectedNodeId.value || !connectToId.value) return;
-    edges.value.push({ id: crypto.randomUUID(), fromId: selectedNodeId.value, toId: connectToId.value });
+    edges.value.push({ id: crypto.randomUUID(), fromId: selectedNodeId.value, toId: connectToId.value, label: '', condition: '' });
     connectToId.value = null;
 }
 
@@ -232,7 +253,12 @@ function generateDefinition() {
     const start = nodes.value.find(n => n.type === 'Start') || nodes.value[0] || null;
     const def = { start: start?.id || null, nodes: {} };
     for (const n of nodes.value) {
-        def.nodes[n.id] = { type: n.type, next: outgoingEdges(n.id).map(e => e.toId) };
+        const out = outgoingEdges(n.id).map(e => ({ to: e.toId, label: e.label || null, condition: e.condition || null }));
+        const nodeDef = { type: n.type, next: out };
+        if (n.type === 'Parallel') {
+            nodeDef.policy = n.parallelPolicy || 'ALL'; // ALL or ANY
+        }
+        def.nodes[n.id] = nodeDef;
     }
     return def;
 }
