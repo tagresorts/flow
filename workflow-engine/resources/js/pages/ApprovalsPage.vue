@@ -41,6 +41,7 @@
                             <div class="flex items-center gap-2">
                                 <button @click="approve(step)" class="px-2 py-1 bg-emerald-600 text-white rounded text-sm">Approve</button>
                                 <button @click="reject(step)" class="px-2 py-1 bg-rose-600 text-white rounded text-sm">Reject</button>
+                                <button @click="openReassign(step)" class="px-2 py-1 bg-slate-700 text-white rounded text-sm">Reassign</button>
                             </div>
                         </td>
                     </tr>
@@ -58,6 +59,7 @@ import { onMounted, ref } from 'vue';
 const steps = ref([]);
 const status = ref('');
 const filters = ref({ q: '', status: 'Pending' });
+const userOptions = ref([]);
 
 onMounted(load);
 
@@ -79,6 +81,17 @@ async function reject(step) {
     await axios.post(`/approvals/${step.id}/reject`);
     status.value = 'Rejected successfully';
     await load();
+}
+
+async function openReassign(step) {
+    const res = await axios.get('/directory/users');
+    userOptions.value = res.data;
+    const to = prompt('Enter new assignee user ID (or choose):\n' + userOptions.value.map(u => `${u.id}: ${u.name} <${u.email}>`).join('\n'));
+    if (to) {
+        await axios.post(`/approvals/${step.id}/reassign`, { assigned_to: Number(to) });
+        status.value = 'Reassigned successfully';
+        await load();
+    }
 }
 </script>
 

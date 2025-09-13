@@ -7,6 +7,7 @@ use App\Http\Controllers\FormTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -37,6 +38,9 @@ Route::middleware(['auth'])->group(function () {
     // Forms list
     Route::get('/forms', [FormController::class, 'index']);
 
+    // Directory
+    Route::get('/directory/users', [UserDirectoryController::class, 'users']);
+
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);
 
@@ -49,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('index');
         Route::post('/{requestStep}/approve', [ApprovalController::class, 'approve'])->name('approve');
         Route::post('/{requestStep}/reject', [ApprovalController::class, 'reject'])->name('reject');
+        Route::post('/{requestStep}/reassign', [ApprovalController::class, 'reassign'])->name('reassign');
     });
 });
 
