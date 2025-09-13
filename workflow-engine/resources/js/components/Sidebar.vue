@@ -14,28 +14,52 @@
         <nav class="flex-1">
             <ul>
                 <li class="mb-2">
-                    <a href="/dashboard" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Dashboard">
+                    <RouterLink :to="{ name: 'dashboard' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Dashboard">
                         <span>🏠</span>
                         <span v-if="!collapsed">Dashboard</span>
-                    </a>
+                    </RouterLink>
                 </li>
                 <li class="mb-2">
-                    <a href="/ui/requests/new" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="New Request">
+                    <RouterLink :to="{ name: 'request-new' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="New Request">
                         <span>➕</span>
                         <span v-if="!collapsed">New Request</span>
-                    </a>
+                    </RouterLink>
                 </li>
                 <li class="mb-2">
-                    <a href="/ui/approvals" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Approvals">
+                    <RouterLink :to="{ name: 'approvals' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Approvals">
                         <span>✅</span>
                         <span v-if="!collapsed">Pending Approvals</span>
-                    </a>
+                    </RouterLink>
                 </li>
                 <li class="mb-2">
-                    <a href="/ui/workflows" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Workflows">
+                    <RouterLink :to="{ name: 'workflows' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Workflows">
                         <span>⚙️</span>
                         <span v-if="!collapsed">Workflows</span>
-                    </a>
+                    </RouterLink>
+                </li>
+                <li class="mb-2">
+                    <RouterLink :to="{ name: 'forms' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Forms">
+                        <span>📝</span>
+                        <span v-if="!collapsed">Forms</span>
+                    </RouterLink>
+                </li>
+                <li class="mb-2">
+                    <RouterLink :to="{ name: 'workflow-builder' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Workflow Builder">
+                        <span>🧩</span>
+                        <span v-if="!collapsed">Workflow Builder</span>
+                    </RouterLink>
+                </li>
+                <li class="mb-2">
+                    <RouterLink :to="{ name: 'form-builder' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Form Builder">
+                        <span>🧰</span>
+                        <span v-if="!collapsed">Form Builder</span>
+                    </RouterLink>
+                </li>
+                <li class="mb-2">
+                    <RouterLink :to="{ name: 'audit' }" class="flex items-center gap-3 p-2 rounded hover:bg-gray-800" title="Audit Logs">
+                        <span>📑</span>
+                        <span v-if="!collapsed">Audit Logs</span>
+                    </RouterLink>
                 </li>
             </ul>
         </nav>

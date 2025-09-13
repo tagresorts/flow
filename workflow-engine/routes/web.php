@@ -13,11 +13,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+    Route::get('/dashboard/{any}', function () {
+        return view('dashboard');
+    })->where('any', '.*');
 
-    // Lightweight UI placeholder routes to avoid blank pages while backend APIs are built
-    Route::view('/ui/requests/new', 'ui.request-new')->name('ui.requests.new');
-    Route::view('/ui/approvals', 'ui.approvals')->name('ui.approvals');
-    Route::view('/ui/workflows', 'ui.workflows')->name('ui.workflows');
+    // (SPA handles subpages under /dashboard)
 
     Route::resource('workflows', WorkflowController::class);
     Route::resource('requests', RequestController::class)->except(['edit', 'update', 'destroy']);
