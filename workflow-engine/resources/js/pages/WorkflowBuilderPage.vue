@@ -33,24 +33,35 @@
             </div>
 
             <!-- Canvas -->
-            <div class="lg:col-span-6 relative border rounded bg-white" :style="{ minHeight: '480px', backgroundSize: '20px 20px', backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)' }">
-                <div v-for="n in nodes" :key="n.id" :style="nodeStyle(n)" @mousedown.stop="startDrag(n, $event)" @click.stop="selectNode(n.id)" class="absolute border rounded shadow px-3 py-2 cursor-move select-none"
-                    :class="selectedNodeId === n.id ? 'ring-2 ring-indigo-500' : 'bg-gray-50'">
-                    <div class="text-xs text-gray-500">{{ n.type }}</div>
-                    <div class="font-semibold">{{ n.label }}</div>
-                    <div class="text-[10px] text-gray-400">{{ shortId(n.id) }}</div>
+            <div ref="canvasEl" class="lg:col-span-6 relative border rounded bg-white overflow-hidden" :style="{ minHeight: '480px', backgroundSize: '20px 20px', backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)' }" @mousedown="onCanvasMouseDown">
+                <!-- Toolbar -->
+                <div class="absolute top-2 right-2 bg-white/90 border rounded shadow flex items-center gap-1 p-1 text-xs z-10">
+                    <button @click.stop="zoomOut" class="px-2 py-1 border rounded">-</button>
+                    <div class="px-2">{{ Math.round(zoom*100) }}%</div>
+                    <button @click.stop="zoomIn" class="px-2 py-1 border rounded">+</button>
+                    <button @click.stop="resetView" class="px-2 py-1 border rounded">Reset</button>
                 </div>
 
-                <!-- simple edges rendering as lines -->
-                <svg class="absolute inset-0 pointer-events-none" :width="'100%'" :height="'100%'">
-                    <line v-for="e in edges" :key="e.id" :x1="edgePoints(e).x1" :y1="edgePoints(e).y1" :x2="edgePoints(e).x2" :y2="edgePoints(e).y2" :stroke="edgeStroke(e)" :stroke-dasharray="e.condition ? '4 4' : null" :stroke-width="edgeWidth(e)" marker-end="url(#arrow)" />
-                    <line v-if="rubberBand" :x1="rubberBand.x1" :y1="rubberBand.y1" :x2="rubberBand.x2" :y2="rubberBand.y2" stroke="#6366f1" stroke-dasharray="4 4" stroke-width="2" />
-                    <defs>
-                        <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
-                        </marker>
-                    </defs>
-                </svg>
+                <!-- Transformed content wrapper -->
+                <div class="absolute inset-0" :style="innerTransformStyle">
+                    <div v-for="n in nodes" :key="n.id" :style="nodeStyle(n)" @mousedown.stop="startDrag(n, $event)" @click.stop="selectNode(n.id)" class="absolute border rounded shadow px-3 py-2 cursor-move select-none"
+                        :class="selectedNodeId === n.id ? 'ring-2 ring-indigo-500' : 'bg-gray-50'">
+                        <div class="text-xs text-gray-500">{{ n.type }}</div>
+                        <div class="font-semibold">{{ n.label }}</div>
+                        <div class="text-[10px] text-gray-400">{{ shortId(n.id) }}</div>
+                    </div>
+
+                    <!-- edges as lines (in transformed coord space) -->
+                    <svg class="absolute inset-0 pointer-events-none" :width="'100%'" :height="'100%'">
+                        <line v-for="e in edges" :key="e.id" :x1="edgePoints(e).x1" :y1="edgePoints(e).y1" :x2="edgePoints(e).x2" :y2="edgePoints(e).y2" :stroke="edgeStroke(e)" :stroke-dasharray="e.condition ? '4 4' : null" :stroke-width="edgeWidth(e)" marker-end="url(#arrow)" />
+                        <line v-if="rubberBand" :x1="rubberBand.x1" :y1="rubberBand.y1" :x2="rubberBand.x2" :y2="rubberBand.y2" stroke="#6366f1" stroke-dasharray="4 4" stroke-width="2" />
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
             </div>
 
             <!-- Properties -->
@@ -251,6 +262,12 @@ const templates = ref([]);
 const selectedTemplateId = ref(null);
 const visualMeta = ref(null);
 const approverSelectorMode = ref('users');
+const canvasEl = ref(null);
+const zoom = ref(1);
+const pan = ref({ x: 0, y: 0 });
+const isPanning = ref(false);
+const panStart = ref({ x: 0, y: 0 });
+const viewStart = ref({ x: 0, y: 0 });
 const formFields = ref([]);
 
 onMounted(async () => {
@@ -440,7 +457,7 @@ function startDrag(n, evt) {
 }
 
 function onDragMove(evt) {
-    const canvas = document.querySelector('.lg\\:col-span-6.relative');
+    const canvas = canvasEl.value;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     if (dragging) {
@@ -463,7 +480,7 @@ function onDragEnd(evt) {
     window.removeEventListener('mouseup', onDragEnd);
     if (rubberBand.value) {
         // hit-test end node
-        const canvas = document.querySelector('.lg\\:col-span-6.relative');
+        const canvas = canvasEl.value;
         const rect = canvas.getBoundingClientRect();
         const endX = evt.clientX - rect.left;
         const endY = evt.clientY - rect.top;
@@ -486,6 +503,37 @@ function onDragEnd(evt) {
 function edgeWidth(e) {
     const from = nodeById(e.fromId);
     return from?.type === 'Parallel' ? 3 : 2;
+}
+
+// Zoom & Pan
+const innerTransformStyle = computed(() => {
+    return { transform: `translate(${pan.value.x}px, ${pan.value.y}px) scale(${zoom.value})`, transformOrigin: '0 0' };
+});
+
+function zoomIn() { zoom.value = Math.min(2, +(zoom.value + 0.1).toFixed(2)); }
+function zoomOut() { zoom.value = Math.max(0.3, +(zoom.value - 0.1).toFixed(2)); }
+function resetView() { zoom.value = 1; pan.value = { x: 0, y: 0 }; }
+
+function onCanvasMouseDown(evt) {
+    if (!evt.altKey) return; // hold Alt to pan
+    isPanning.value = true;
+    panStart.value = { x: evt.clientX, y: evt.clientY };
+    viewStart.value = { ...pan.value };
+    window.addEventListener('mousemove', onPanMove);
+    window.addEventListener('mouseup', onPanEnd);
+}
+
+function onPanMove(evt) {
+    if (!isPanning.value) return;
+    const dx = evt.clientX - panStart.value.x;
+    const dy = evt.clientY - panStart.value.y;
+    pan.value = { x: viewStart.value.x + dx, y: viewStart.value.y + dy };
+}
+
+function onPanEnd() {
+    isPanning.value = false;
+    window.removeEventListener('mousemove', onPanMove);
+    window.removeEventListener('mouseup', onPanEnd);
 }
 
 function shortId(id) {
