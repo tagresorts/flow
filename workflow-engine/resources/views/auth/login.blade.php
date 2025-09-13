@@ -13,13 +13,13 @@
             <form method="POST" action="{{ route('login') }}">
                 @csrf
 
-                <!-- Email Address -->
+                <!-- Email or Username -->
                 <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700" for="email">
-                        Email
+                    <label class="block text-sm font-medium text-gray-700" for="login">
+                        Email or Username
                     </label>
-                    <input id="email" class="block w-full mt-1 border-gray-300 rounded-md shadow-sm" type="email" name="email" value="{{ old('email') }}" required autofocus />
-                    @error('email')
+                    <input id="login" class="block w-full mt-1 border-gray-300 rounded-md shadow-sm" type="text" name="login" value="{{ old('login') }}" required autofocus />
+                    @error('login')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
