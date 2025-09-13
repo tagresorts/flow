@@ -6,10 +6,14 @@ use App\Http\Controllers\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
     Route::resource('workflows', WorkflowController::class);
     Route::resource('requests', RequestController::class)->except(['edit', 'update', 'destroy']);
 
@@ -19,3 +23,5 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{requestStep}/reject', [ApprovalController::class, 'reject'])->name('reject');
     });
 });
+
+require __DIR__.'/auth.php';
