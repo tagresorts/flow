@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\UserDirectoryController;
+use App\Http\Controllers\RoleDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -40,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Directory
     Route::get('/directory/users', [UserDirectoryController::class, 'users']);
+    Route::get('/directory/roles', [RoleDirectoryController::class, 'roles']);
 
     Route::get('/builder/forms/templates', [FormTemplateController::class, 'index']);
     Route::post('/builder/forms/templates', [FormTemplateController::class, 'store']);

@@ -73,6 +73,49 @@
                         <p class="text-xs text-gray-500 mt-1">Use edge conditions below to enable/disable branches based on form variables.</p>
                     </div>
 
+                    <div v-if="selectedNode.type === 'Approval'" class="mt-3">
+                        <h3 class="font-medium mb-2">Approvers</h3>
+                        <div class="text-xs text-gray-500 mb-2">Choose by user or role; configure rule & SLA.</div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <select v-model="approverSelectorMode" class="border rounded p-1">
+                                    <option value="users">Users</option>
+                                    <option value="roles">Roles</option>
+                                </select>
+                                <button @click="openApproverPicker" class="px-2 py-1 bg-slate-700 text-white rounded text-sm">Add</button>
+                            </div>
+                            <ul class="text-xs space-y-1">
+                                <li v-for="(a, ai) in (selectedNode.approvers || [])" :key="ai" class="flex items-center justify-between bg-white border rounded p-1">
+                                    <span>{{ a.type }}: {{ a.name || a.id }}</span>
+                                    <button @click="selectedNode.approvers.splice(ai,1)" class="text-rose-600">Remove</button>
+                                </li>
+                            </ul>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="block text-sm">Rule
+                                    <select v-model="(selectedNode.approvalRule)" class="mt-1 border rounded p-1 w-full">
+                                        <option value="ALL">All must approve</option>
+                                        <option value="ANY">Any one can approve</option>
+                                        <option value="MAJORITY">Majority</option>
+                                    </select>
+                                </label>
+                                <label class="block text-sm">SLA (hours)
+                                    <input type="number" v-model.number="(selectedNode.slaHours)" class="mt-1 border rounded p-1 w-full" />
+                                </label>
+                            </div>
+                            <div>
+                                <h4 class="font-medium mb-1">Notifications</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="block text-sm">Email To
+                                        <input v-model="selectedNode.notifyEmail" placeholder="user@example.com" class="mt-1 border rounded p-1 w-full" />
+                                    </label>
+                                    <label class="block text-sm">Webhook URL
+                                        <input v-model="selectedNode.webhookUrl" placeholder="https://..." class="mt-1 border rounded p-1 w-full" />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mt-3">
                         <h3 class="font-medium mb-1">Connect</h3>
                         <div class="flex items-center gap-2">
@@ -147,6 +190,7 @@ const status = ref('');
 const templates = ref([]);
 const selectedTemplateId = ref(null);
 const visualMeta = ref(null);
+const approverSelectorMode = ref('users');
 
 onMounted(async () => {
     const res = await axios.post('/builder/workflows/ensure-default');
@@ -210,6 +254,9 @@ function addNode(type) {
         row: nodes.value.length, // simple stacking
         col: 0,
         config: {},
+        approvers: type === 'Approval' ? [] : undefined,
+        approvalRule: type === 'Approval' ? 'ALL' : undefined,
+        slaHours: type === 'Approval' ? 48 : undefined,
     });
 }
 
@@ -258,9 +305,30 @@ function generateDefinition() {
         if (n.type === 'Parallel') {
             nodeDef.policy = n.parallelPolicy || 'ALL'; // ALL or ANY
         }
+        if (n.type === 'Approval') {
+            nodeDef.approval = {
+                rule: n.approvalRule || 'ALL',
+                slaHours: n.slaHours ?? null,
+                approvers: (n.approvers || []).map(a => ({ type: a.type, id: a.id, name: a.name || null })),
+                notifyEmail: n.notifyEmail || null,
+                webhookUrl: n.webhookUrl || null,
+            };
+        }
         def.nodes[n.id] = nodeDef;
     }
     return def;
+}
+
+async function openApproverPicker() {
+    if (approverSelectorMode.value === 'users') {
+        const res = await axios.get('/directory/users');
+        const pick = prompt('Pick user id to add as approver:\n' + res.data.map(u => `${u.id}: ${u.name} <${u.email}>`).join('\n'));
+        if (pick && selectedNode.value) selectedNode.value.approvers.push({ type: 'user', id: Number(pick), name: res.data.find(u => u.id === Number(pick))?.name });
+    } else {
+        const res = await axios.get('/directory/roles');
+        const pick = prompt('Pick role id to add as approver:\n' + res.data.map(r => `${r.id}: ${r.name}`).join('\n'));
+        if (pick && selectedNode.value) selectedNode.value.approvers.push({ type: 'role', id: Number(pick), name: res.data.find(r => r.id === Number(pick))?.name });
+    }
 }
 
 async function generateDefinitionAndSave() {
