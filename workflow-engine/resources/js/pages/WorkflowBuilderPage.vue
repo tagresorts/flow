@@ -38,6 +38,7 @@
                     :class="selectedNodeId === n.id ? 'ring-2 ring-indigo-500' : 'bg-gray-50'">
                     <div class="text-xs text-gray-500">{{ n.type }}</div>
                     <div class="font-semibold">{{ n.label }}</div>
+                    <div class="text-[10px] text-gray-400">{{ shortId(n.id) }}</div>
                 </div>
 
                 <!-- simple edges rendering as lines -->
@@ -125,10 +126,17 @@
                     <div class="mt-3">
                         <h3 class="font-medium mb-1">Connect</h3>
                         <div class="flex items-center gap-2">
-                            <select v-model="connectToId" class="border rounded p-1 w-full">
-                                <option :value="null">-- to node --</option>
-                                <option v-for="n in nodes.filter(x => x.id !== selectedNodeId)" :key="n.id" :value="n.id">{{ n.label }}</option>
-                            </select>
+                            <template v-if="selectedNode?.type === 'Parallel'">
+                                <select multiple v-model="connectToIds" class="border rounded p-1 w-full h-20">
+                                    <option v-for="n in nodes.filter(x => x.id !== selectedNodeId)" :key="n.id" :value="n.id">{{ n.label }} [{{ shortId(n.id) }}]</option>
+                                </select>
+                            </template>
+                            <template v-else>
+                                <select v-model="connectToId" class="border rounded p-1 w-full">
+                                    <option :value="null">-- to node --</option>
+                                    <option v-for="n in nodes.filter(x => x.id !== selectedNodeId)" :key="n.id" :value="n.id">{{ n.label }} [{{ shortId(n.id) }}]</option>
+                                </select>
+                            </template>
                             <button @click="createEdge()" class="px-2 py-1 bg-indigo-600 text-white rounded text-sm">Add</button>
                         </div>
                         <div class="mt-2 space-y-2">
@@ -141,9 +149,52 @@
                                     <label class="block">Label
                                         <input v-model="e.label" class="mt-1 border rounded p-1 w-full" placeholder="e.g. Path A" />
                                     </label>
-                                    <label class="block">Condition (optional)
-                                        <input v-model="e.condition" class="mt-1 border rounded p-1 w-full" placeholder="e.g. amount > 5000" />
+                                    <label class="block">Mode
+                                        <select v-model="e.condMode" class="mt-1 border rounded p-1 w-full">
+                                            <option value="builder">Builder</option>
+                                            <option value="advanced">Advanced</option>
+                                        </select>
                                     </label>
+                                </div>
+                                <div v-if="e.condMode !== 'advanced'" class="grid grid-cols-3 gap-2 mt-2">
+                                    <label class="block">Field
+                                        <select v-model="e.cbField" class="mt-1 border rounded p-1 w-full">
+                                            <option :value="null">-- choose --</option>
+                                            <option v-for="f in formFields" :key="f.variable_name" :value="f.variable_name">{{ f.label }} ({{ f.variable_name }})</option>
+                                        </select>
+                                    </label>
+                                    <label class="block">Operator
+                                        <select v-model="e.cbOp" class="mt-1 border rounded p-1 w-full">
+                                            <option value=">">></option>
+                                            <option value=">=">>=</option>
+                                            <option value="<"><</option>
+                                            <option value="<="><=</option>
+                                            <option value="==">=</option>
+                                            <option value="!=">!=</option>
+                                            <option value="contains">contains</option>
+                                            <option value="startsWith">startsWith</option>
+                                            <option value="endsWith">endsWith</option>
+                                            <option value="regex">regex</option>
+                                            <option value="between">between</option>
+                                            <option value="in">in</option>
+                                            <option value="notIn">not in</option>
+                                        </select>
+                                    </label>
+                                    <label class="block">Value
+                                        <input v-model="e.cbValue" class="mt-1 border rounded p-1 w-full" placeholder="e.g. 5000 or foo,bar" />
+                                    </label>
+                                    <label v-if="e.cbOp==='between'" class="block">And
+                                        <input v-model="e.cbValue2" class="mt-1 border rounded p-1 w-full" placeholder="e.g. 10000" />
+                                    </label>
+                                    <div class="col-span-3 text-right">
+                                        <button @click="applyBuiltCondition(e)" class="px-2 py-1 bg-slate-600 text-white rounded text-xs">Apply</button>
+                                    </div>
+                                </div>
+                                <div v-else class="mt-2">
+                                    <label class="block">Expression
+                                        <input v-model="e.condition" class="mt-1 border rounded p-1 w-full" placeholder="e.g. amount > 5000 && department == 'HR'" />
+                                    </label>
+                                    <p class="text-[10px] text-gray-500 mt-1">Use AND/OR, parentheses, and functions: contains(x,y), startsWith(x,y), endsWith(x,y), regex(x,pattern).</p>
                                 </div>
                             </div>
                         </div>
@@ -188,6 +239,7 @@ const nodes = ref([]);
 const edges = ref([]);
 const selectedNodeId = ref(null);
 const connectToId = ref(null);
+const connectToIds = ref([]);
 let dragging = null; // { id, offsetX, offsetY }
 const rubberBand = ref(null);
 
@@ -199,6 +251,7 @@ const templates = ref([]);
 const selectedTemplateId = ref(null);
 const visualMeta = ref(null);
 const approverSelectorMode = ref('users');
+const formFields = ref([]);
 
 onMounted(async () => {
     const res = await axios.post('/builder/workflows/ensure-default');
@@ -208,6 +261,11 @@ onMounted(async () => {
     }
     const t = await axios.get('/builder/forms/templates');
     templates.value = t.data.data ?? t.data;
+    // load form fields of linked template (if any via published form)
+    if (workflowId.value) {
+        const formRes = await axios.get(`/workflows/${workflowId.value}/form`);
+        formFields.value = formRes.data?.fields || [];
+    }
 });
 
 function loadFromVisual(visual) {
@@ -288,8 +346,15 @@ function outgoingEdges(id) {
 
 function createEdge() {
     if (!selectedNodeId.value || !connectToId.value) return;
-    edges.value.push({ id: crypto.randomUUID(), fromId: selectedNodeId.value, toId: connectToId.value, label: '', condition: '' });
-    connectToId.value = null;
+    if (selectedNode.value?.type === 'Parallel' && connectToIds.value && connectToIds.value.length) {
+        for (const to of connectToIds.value) {
+            edges.value.push({ id: crypto.randomUUID(), fromId: selectedNodeId.value, toId: to, label: '', condition: '', condMode: 'builder' });
+        }
+        connectToIds.value = [];
+    } else {
+        edges.value.push({ id: crypto.randomUUID(), fromId: selectedNodeId.value, toId: connectToId.value, label: '', condition: '', condMode: 'builder' });
+        connectToId.value = null;
+    }
 }
 
 function deleteEdge(id) {
@@ -421,6 +486,37 @@ function onDragEnd(evt) {
 function edgeWidth(e) {
     const from = nodeById(e.fromId);
     return from?.type === 'Parallel' ? 3 : 2;
+}
+
+function shortId(id) {
+    return (id || '').toString().slice(0, 6);
+}
+
+function applyBuiltCondition(e) {
+    if (!e.cbField || !e.cbOp) {
+        e.condition = '';
+        return;
+    }
+    const v = (e.cbValue || '').trim();
+    const v2 = (e.cbValue2 || '').trim();
+    const field = e.cbField;
+    const wrap = (x) => (isNaN(Number(x)) ? `'${x}'` : x);
+    switch (e.cbOp) {
+        case '>': e.condition = `${field} > ${wrap(v)}`; break;
+        case '>=': e.condition = `${field} >= ${wrap(v)}`; break;
+        case '<': e.condition = `${field} < ${wrap(v)}`; break;
+        case '<=': e.condition = `${field} <= ${wrap(v)}`; break;
+        case '==': e.condition = `${field} == ${wrap(v)}`; break;
+        case '!=': e.condition = `${field} != ${wrap(v)}`; break;
+        case 'contains': e.condition = `contains(${field}, ${wrap(v)})`; break;
+        case 'startsWith': e.condition = `startsWith(${field}, ${wrap(v)})`; break;
+        case 'endsWith': e.condition = `endsWith(${field}, ${wrap(v)})`; break;
+        case 'regex': e.condition = `regex(${field}, ${wrap(v)})`; break;
+        case 'between': e.condition = `${field} >= ${wrap(v)} && ${field} <= ${wrap(v2)}`; break;
+        case 'in': e.condition = `in(${field}, [${(v||'').split(',').map(s=>wrap(s.trim())).join(', ')}])`; break;
+        case 'notIn': e.condition = `!in(${field}, [${(v||'').split(',').map(s=>wrap(s.trim())).join(', ')}])`; break;
+        default: e.condition = '';
+    }
 }
 </script>
 
