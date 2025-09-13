@@ -14,6 +14,11 @@ Route::middleware(['auth'])->group(function () {
         return view('dashboard');
     })->name('dashboard');
 
+    // Lightweight UI placeholder routes to avoid blank pages while backend APIs are built
+    Route::view('/ui/requests/new', 'ui.request-new')->name('ui.requests.new');
+    Route::view('/ui/approvals', 'ui.approvals')->name('ui.approvals');
+    Route::view('/ui/workflows', 'ui.workflows')->name('ui.workflows');
+
     Route::resource('workflows', WorkflowController::class);
     Route::resource('requests', RequestController::class)->except(['edit', 'update', 'destroy']);
 
