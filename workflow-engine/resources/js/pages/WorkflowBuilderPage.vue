@@ -34,7 +34,7 @@
 
             <!-- Canvas -->
             <div class="lg:col-span-6 relative border rounded bg-white" :style="{ minHeight: '480px', backgroundSize: '20px 20px', backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)' }">
-                <div v-for="n in nodes" :key="n.id" :style="nodeStyle(n)" @click.stop="selectNode(n.id)" class="absolute border rounded shadow px-3 py-2 cursor-pointer select-none"
+                <div v-for="n in nodes" :key="n.id" :style="nodeStyle(n)" @mousedown.stop="startDrag(n, $event)" @click.stop="selectNode(n.id)" class="absolute border rounded shadow px-3 py-2 cursor-move select-none"
                     :class="selectedNodeId === n.id ? 'ring-2 ring-indigo-500' : 'bg-gray-50'">
                     <div class="text-xs text-gray-500">{{ n.type }}</div>
                     <div class="font-semibold">{{ n.label }}</div>
@@ -43,6 +43,7 @@
                 <!-- simple edges rendering as lines -->
                 <svg class="absolute inset-0 pointer-events-none" :width="'100%'" :height="'100%'">
                     <line v-for="e in edges" :key="e.id" :x1="edgePoints(e).x1" :y1="edgePoints(e).y1" :x2="edgePoints(e).x2" :y2="edgePoints(e).y2" :stroke="edgeStroke(e)" :stroke-dasharray="e.condition ? '4 4' : null" :stroke-width="edgeWidth(e)" marker-end="url(#arrow)" />
+                    <line v-if="rubberBand" :x1="rubberBand.x1" :y1="rubberBand.y1" :x2="rubberBand.x2" :y2="rubberBand.y2" stroke="#6366f1" stroke-dasharray="4 4" stroke-width="2" />
                     <defs>
                         <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
@@ -187,6 +188,8 @@ const nodes = ref([]);
 const edges = ref([]);
 const selectedNodeId = ref(null);
 const connectToId = ref(null);
+let dragging = null; // { id, offsetX, offsetY }
+const rubberBand = ref(null);
 
 const visualConfigJson = ref('{\n  "nodes": [],\n  "edges": []\n}');
 const definitionJson = ref('{\n  "start": null,\n  "nodes": {}\n}');
@@ -348,6 +351,71 @@ function edgeStroke(e) {
     if (from?.type === 'Parallel') return '#2563eb'; // blue for split
     if (from?.type === 'Condition') return '#16a34a'; // green for condition
     return '#94a3b8';
+}
+
+// Dragging logic and rubber-band connector
+function startDrag(n, evt) {
+    selectedNodeId.value = n.id;
+    const rect = evt.currentTarget.parentElement.getBoundingClientRect();
+    const nodeTop = (n.row ?? 0) * 90 + 16;
+    const nodeLeft = (n.col ?? 0) * 160 + 16;
+    dragging = {
+        id: n.id,
+        startX: evt.clientX,
+        startY: evt.clientY,
+        offsetX: evt.clientX - (rect.left + nodeLeft),
+        offsetY: evt.clientY - (rect.top + nodeTop),
+    };
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    // hold Ctrl to start rubber-band
+    if (evt.ctrlKey) {
+        rubberBand.value = { x1: evt.clientX - rect.left, y1: evt.clientY - rect.top, x2: evt.clientX - rect.left, y2: evt.clientY - rect.top, fromId: n.id };
+    }
+}
+
+function onDragMove(evt) {
+    const canvas = document.querySelector('.lg\\:col-span-6.relative');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (dragging) {
+        const x = evt.clientX - rect.left - dragging.offsetX;
+        const y = evt.clientY - rect.top - dragging.offsetY;
+        const node = nodeById(dragging.id);
+        if (node) {
+            node.col = Math.max(0, Math.round((x - 16) / 160));
+            node.row = Math.max(0, Math.round((y - 16) / 90));
+        }
+    }
+    if (rubberBand.value) {
+        rubberBand.value.x2 = evt.clientX - rect.left;
+        rubberBand.value.y2 = evt.clientY - rect.top;
+    }
+}
+
+function onDragEnd(evt) {
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
+    if (rubberBand.value) {
+        // hit-test end node
+        const canvas = document.querySelector('.lg\\:col-span-6.relative');
+        const rect = canvas.getBoundingClientRect();
+        const endX = evt.clientX - rect.left;
+        const endY = evt.clientY - rect.top;
+        const to = nodes.value.find(n => {
+            const ns = nodeStyle(n);
+            const left = parseInt(ns.left);
+            const top = parseInt(ns.top);
+            const right = left + 140;
+            const bottom = top + 56; // approx height
+            return endX >= left && endX <= right && endY >= top && endY <= bottom;
+        });
+        if (to && rubberBand.value.fromId && to.id !== rubberBand.value.fromId) {
+            edges.value.push({ id: crypto.randomUUID(), fromId: rubberBand.value.fromId, toId: to.id, label: '', condition: '' });
+        }
+    }
+    dragging = null;
+    rubberBand.value = null;
 }
 
 function edgeWidth(e) {
