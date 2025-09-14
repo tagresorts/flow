@@ -40,7 +40,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Forms list
     Route::get('/forms', [FormController::class, 'index']);
-    Route::post('/forms', [FormController::class, 'store']);
 
     // Directory
     Route::get('/directory/users', [UserDirectoryController::class, 'users']);
