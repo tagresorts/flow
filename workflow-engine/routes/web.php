@@ -38,8 +38,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/builder/workflows/{workflow}/form-template', [WorkflowController::class, 'getFormTemplate']);
     Route::get('/workflows/{workflow}/form', [WorkflowController::class, 'getForm']);
 
-    // Forms list
+    // Forms CRUD
     Route::get('/forms', [FormController::class, 'index']);
+    Route::post('/forms', [FormController::class, 'store']);
+    Route::get('/forms/{form}', [FormController::class, 'show']);
+    Route::put('/forms/{form}', [FormController::class, 'update']);
+    Route::delete('/forms/{form}', [FormController::class, 'destroy']);
 
     // Directory
     Route::get('/directory/users', [UserDirectoryController::class, 'users']);
