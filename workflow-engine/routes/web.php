@@ -48,6 +48,9 @@ Route::middleware(['auth'])->group(function () {
     // Admin
     Route::get('/admin/mail-settings', [MailSettingController::class, 'index']);
     Route::post('/admin/mail-settings', [MailSettingController::class, 'store']);
+    Route::get('/admin/mail-settings/{mailSetting}', [MailSettingController::class, 'show']);
+    Route::put('/admin/mail-settings/{mailSetting}', [MailSettingController::class, 'update']);
+    Route::delete('/admin/mail-settings/{mailSetting}', [MailSettingController::class, 'destroy']);
     Route::post('/admin/mail-settings/test', [MailSettingController::class, 'test']);
 
     Route::get('/admin/users', [UserAdminController::class, 'index']);
